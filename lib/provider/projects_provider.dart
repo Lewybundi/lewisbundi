@@ -66,19 +66,19 @@ final projectsProvider = Provider<List<Project>>((ref) {
 
 final experiencesProvider = Provider<List<Experience>>((ref) {
   return [
-    const Experience(
+     const Experience(
       id: '1',
-      company: ' Self-Employed.',
-      position: 'Mobile App Developer',
-      duration: '2024 - Present',
-      description: 'Delivering cross-platform Flutter applications from concept to Google Play Store with seamless user experiences.',
+      company: 'Hope Orphanage',
+      position: 'Mobile Development Tutor (Volunteer)',
+      duration: 'November 2024 - June 2025',
+      description: 'Volunteering to teach mobile app development fundamentals to orphanage youth, empowering them with marketable Flutter and programming skills.',
     ),
     const Experience(
       id: '2',
       company: 'Self-Employed.',
       position: 'Backend Developer',
-      duration: '2024 - present',
-      description: 'Building full-stack Django applications and curating a diverse GitHub portfolio of technical solutions.',
+      duration: 'March 2025 - present',
+      description: 'Building RESTful APIs with Django REST Framework and curating a diverse GitHub portfolio of technical solutions.',
     ),
   ];
 });
