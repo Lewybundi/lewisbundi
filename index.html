@@ -20,6 +20,7 @@
             <li><a href="#home" class="nav-link active">Home</a></li>
             <li><a href="#about" class="nav-link">About</a></li>
             <li><a href="#projects" class="nav-link">Projects</a></li>
+            <li><a href="#blog" class="nav-link">Blog</a></li>
             <li><a href="#contact" class="nav-link">Contact</a></li>
         </ul>
     </nav>
@@ -290,6 +291,16 @@
 
         </section>
 
+        <!-- Blog Section -->
+        <section id="blog" class="blog">
+            <h2 class="section-title">&lt;blog/&gt;</h2>
+            
+            <div id="blog-loading" class="blog-loading">Fetching insightful posts...</div>
+            <div id="blog-grid" class="projects-grid blog-grid" style="display: none;">
+                <!-- Blog cards will be injected here via JavaScript -->
+            </div>
+        </section>
+
         <!-- Contact Section -->
         <section id="contact" class="contact">
             <h2 class="section-title">&lt;contact/&gt;</h2>
@@ -350,6 +361,16 @@
             </div>
         </section>
     </main>
+
+    <!-- Blog Modal -->
+    <div id="blog-modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="close-modal" class="close-modal">&times;</span>
+            <div id="modal-body-content" class="modal-body">
+                <!-- Blog content injected via JS -->
+            </div>
+        </div>
+    </div>
 
     <!-- EmailJS script -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>

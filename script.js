@@ -116,4 +116,193 @@ document.addEventListener('DOMContentLoaded', () => {
             formStatus.classList.add('status-error');
         }
     }
+
+    // 4. Prismic Blog Integration
+    const prismicUrl = 'https://lewis-bundi.cdn.prismic.io/api/v2';
+    const blogGrid = document.getElementById('blog-grid');
+    const blogLoading = document.getElementById('blog-loading');
+    const blogModal = document.getElementById('blog-modal');
+    const closeModal = document.getElementById('close-modal');
+    const modalBodyContent = document.getElementById('modal-body-content');
+
+    let allPosts = [];
+
+    async function initBlog() {
+        if (!blogGrid || !blogLoading) return;
+        
+        try {
+            // 1. Fetch Repository Master Ref
+            const repoResponse = await fetch(prismicUrl);
+            const repoData = await repoResponse.json();
+            const masterRef = repoData.refs.find(r => r.id === 'master').ref;
+
+            // 2. Query Documents
+            const docsResponse = await fetch(`${prismicUrl}/documents/search?ref=${masterRef}`);
+            const docsData = await docsResponse.json();
+            
+            allPosts = docsData.results || [];
+            
+            // Sort by published date (newest first)
+            allPosts.sort((a, b) => {
+                const dateA = new Date(a.data?.published_date || a.first_publication_date || a.last_publication_date || 0);
+                const dateB = new Date(b.data?.published_date || b.first_publication_date || b.last_publication_date || 0);
+                return dateB - dateA;
+            });
+            
+            blogLoading.style.display = 'none';
+            blogGrid.style.display = 'grid';
+
+            if (allPosts.length === 0) {
+                blogGrid.innerHTML = '<p style="color: var(--color-secondary); grid-column: 1 / -1; text-align: center;">No blog posts available yet. Check back soon!</p>';
+                return;
+            }
+
+            renderBlogCards();
+
+        } catch (error) {
+            console.error('Error fetching Prismic CMS:', error);
+            blogLoading.textContent = 'Unable to load blog posts at this time.';
+        }
+    }
+
+    function renderBlogCards() {
+        blogGrid.innerHTML = '';
+        allPosts.forEach((post, index) => {
+            const data = post.data;
+            const titleStr = data.title ? getRichTextString(data.title) : 'Untitled Post';
+            const dateStr = data.published_date || post.first_publication_date || post.last_publication_date;
+            const date = new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+            const card = document.createElement('div');
+            card.className = 'project-card'; // Reuse layout styles
+            
+            // Build simple excerpt from summary or body
+            let excerpt = getRichTextString(data.summary || []);
+            if (!excerpt && data.body) {
+                excerpt = getRichTextString(data.body);
+            }
+            if (excerpt.length > 150) {
+                excerpt = excerpt.slice(0, 150) + '...';
+            }
+            if (!excerpt) excerpt = 'Click to read this article...';
+
+            card.innerHTML = `
+                <div class="project-content">
+                    <div class="project-header">
+                        <h3 class="project-title" style="margin-bottom: 0.5rem;">${titleStr}</h3>
+                    </div>
+                    <span class="blog-meta"><i class="ri-calendar-line"></i> ${date}</span>
+                    <p class="project-desc" style="margin-top: 0.5rem;">${excerpt}</p>
+                    <div class="tech-stack" style="margin-top: auto; padding-top: 1rem;">
+                        <button class="btn btn-outline read-more-btn" data-index="${index}" style="padding: 0.5rem 1rem; width: 100%; border-radius: 6px;">Read Article <i class="ri-arrow-right-line" style="pointer-events:none;"></i></button>
+                    </div>
+                </div>
+            `;
+            blogGrid.appendChild(card);
+        });
+
+        // Event listeners for opening modal
+        document.querySelectorAll('.read-more-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = e.target.getAttribute('data-index');
+                if (index !== null) {
+                    openModal(allPosts[index]);
+                }
+            });
+        });
+    }
+
+    function openModal(post) {
+        if (!blogModal || !modalBodyContent) return;
+        
+        const data = post.data;
+        const title = data.title ? getRichTextString(data.title) : 'Untitled Post';
+        const bodyContent = data.body ? renderRichText(data.body) : '<p>No content available for this post.</p>';
+        const dateStr = data.published_date || post.first_publication_date || post.last_publication_date;
+        const date = new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+        modalBodyContent.innerHTML = `
+            <h2>${title}</h2>
+            <span class="blog-meta" style="margin-bottom: 1.5rem;"><i class="ri-calendar-line"></i> Published on ${date}</span>
+            <hr style="border: 0; border-top: 1px dashed rgba(0,255,0,0.3); margin-bottom: 1.5rem;">
+            ${bodyContent}
+        `;
+        
+        blogModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Prevent background page scrolling
+    }
+
+    // Modal Close logic
+    if (closeModal && blogModal) {
+        closeModal.addEventListener('click', () => {
+            blogModal.classList.add('hidden');
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        });
+
+        blogModal.addEventListener('click', (e) => {
+            if (e.target === blogModal) {
+                blogModal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    }
+
+    // Helper functions for parsing Prismic JSON into basic HTML
+    function getRichTextString(richTextArray) {
+        if (typeof richTextArray === 'string') return richTextArray;
+        if (!Array.isArray(richTextArray)) return '';
+        return richTextArray.map(b => b.text || '').join(' ').trim();
+    }
+
+    function renderRichText(richTextArray) {
+        if (!Array.isArray(richTextArray)) return typeof richTextArray === 'string' ? richTextArray : '';
+        let html = '';
+        let inList = false;
+        let inOList = false;
+    
+        richTextArray.forEach(block => {
+            // Close open lists if current block is not a list item
+            if (block.type !== 'list-item' && inList) { html += '</ul>'; inList = false; }
+            if (block.type !== 'o-list-item' && inOList) { html += '</ol>'; inOList = false; }
+
+            switch (block.type) {
+                case 'list-item':
+                    if (!inList) { html += '<ul>'; inList = true; }
+                    html += `<li>${block.text}</li>`;
+                    break;
+                case 'o-list-item':
+                    if (!inOList) { html += '<ol>'; inOList = true; }
+                    html += `<li>${block.text}</li>`;
+                    break;
+                case 'image':
+                    html += `<img src="${block.url}" alt="${block.alt || ''}">`;
+                    break;
+                case 'paragraph':
+                    // Render paragraphs or simple text
+                    html += `<p>${block.text || '&nbsp;'}</p>`;
+                    break;
+                case 'preformatted':
+                    html += `<pre style="background:rgba(0,0,0,0.5); padding:1rem; border-radius:6px; overflow-x:auto;"><code>${block.text}</code></pre>`;
+                    break;
+                default:
+                    // If it's a heading (heading1, heading2, etc.)
+                    if (block.type.startsWith('heading')) {
+                        const level = block.type.replace('heading', '');
+                        html += `<h${level}>${block.text}</h${level}>`;
+                    } else {
+                        html += `<p>${block.text}</p>`;
+                    }
+                    break;
+            }
+        });
+        
+        // Clean up unclosed lists
+        if (inList) html += '</ul>';
+        if (inOList) html += '</ol>';
+        
+        return html;
+    }
+
+    // Init the blog
+    initBlog();
 });
